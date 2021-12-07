@@ -688,6 +688,7 @@ extern ref_api_t      gEngfuncs;
 extern ref_globals_t *gpGlobals;
 extern cvar_t	*gl_emboss_scale;
 extern cvar_t	*r_dynamic;
+extern cvar_t	*r_water_ripples;
 
 DECLARE_ENGINE_SHARED_CVAR_LIST()
 
@@ -1218,6 +1219,11 @@ void TransformVector (vec3_t in, vec3_t out);
 //
 void R_RenderBmodelFace (bedge_t *pedges, msurface_t *psurf);
 void R_RenderFace (msurface_t *fa, int clipflags);
+
+//
+// r_ripples.c
+//
+pixel_t *R_Ripples( float step, texture_t *tex, int *cachewidth );
 
 //
 // r_main.c

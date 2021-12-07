@@ -302,7 +302,9 @@ void TurbulentZ8 (espan_t *pspan, int alpha1)
 	if( alpha == 0 )
 		return;
 
-	r_turb_turb = sintable + ((int)(gpGlobals->time*SPEED)&(CYCLE-1));
+	if( r_water_ripples->value )
+		r_turb_turb = blanktable;
+	else r_turb_turb = sintable + ((int)(gpGlobals->time*SPEED)&(CYCLE-1));
 
 	r_turb_sstep = 0;	// keep compiler happy
 	r_turb_tstep = 0;	// ditto

@@ -80,6 +80,8 @@ cvar_t	*r_traceglow;
 
 cvar_t	*r_lightlevel;	//FIXME HACK
 
+cvar_t	*r_water_ripples;
+
 //PGM
 cvar_t	*sw_lockpvs;
 //PGM
@@ -1917,6 +1919,7 @@ qboolean GAME_EXPORT R_Init( void )
 
 	gl_emboss_scale = gEngfuncs.Cvar_Get( "gl_emboss_scale", "0", FCVAR_ARCHIVE|FCVAR_LATCH, "fake bumpmapping scale" );
 	r_fullbright = gEngfuncs.Cvar_Get( "r_fullbright", "0", FCVAR_CHEAT, "disable lightmaps, get fullbright for entities" );
+	r_water_ripples = gEngfuncs.Cvar_Get( "r_water_ripples", "1", FCVAR_GLCONFIG, "enable fancy water ripples animation" );
 
 //	sw_aliasstats = ri.Cvar_Get ("sw_polymodelstats", "0", 0);
 //	sw_allow_modex = ri.Cvar_Get( "sw_allow_modex", "1", CVAR_ARCHIVE );

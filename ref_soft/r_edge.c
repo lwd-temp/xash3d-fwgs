@@ -922,7 +922,7 @@ void D_TurbulentSurf (surf_t *s)
 	pface = s->msurf;
 	miplevel = 0;
 	cacheblock = R_GetTexture(pface->texinfo->texture->gl_texturenum)->pixels[0];
-	cachewidth = 64;
+	cachewidth = 128;
 
 	if (s->insubmodel)
 	{
@@ -946,10 +946,19 @@ void D_TurbulentSurf (surf_t *s)
 #if 0
 	Turbulent8 (s->spans);
 #else
-	if(!(pface->flags & SURF_DRAWTURB))
-		NonTurbulent8 (s->spans);
+	if( r_water_ripples->value )
+	{
+		cacheblock = R_Ripples( 0.1, pface->texinfo->texture, &cachewidth );
+
+		NonTurbulent8( s->spans );
+	}
 	else
-		Turbulent8 (s->spans);
+	{
+		if(!(pface->flags & SURF_DRAWTURB))
+			NonTurbulent8 (s->spans);
+		else
+			Turbulent8 (s->spans);
+	}
 #endif
 //PGM
 //============
@@ -1083,8 +1092,15 @@ void D_AlphaSurf (surf_t *s)
 
 	if (s->flags & SURF_DRAWTURB )
 	{
-		cacheblock = R_GetTexture(pface->texinfo->texture->gl_texturenum)->pixels[0];
-		cachewidth = 64;
+		if( r_water_ripples->value )
+		{
+			cacheblock = R_Ripples( 0.1, pface->texinfo->texture, &cachewidth );
+		}
+		else
+		{
+			cacheblock = R_GetTexture(pface->texinfo->texture->gl_texturenum)->pixels[0];
+			cachewidth = 128;
+		}
 		D_CalcGradients (pface);
 		TurbulentZ8( s->spans, alpha);
 	}
