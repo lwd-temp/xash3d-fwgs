@@ -703,6 +703,8 @@ qboolean R_Init( void )
 				break;
 		}
 	}
+	
+	RM_SetRender(&ref.dllFuncs);
 
 	if( !success )
 	{
