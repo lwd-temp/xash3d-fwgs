@@ -372,6 +372,9 @@ typedef struct ref_api_s
 	void  (*COM_FreeLibrary)( void *handle );
 	void *(*COM_GetProcAddress)( void *handle, const char *name );
 
+	// resources
+	int  (*RM_LoadTexture)( const char *name, const byte *buf, size_t size, int flags );
+
 	// video init
 	// try to create window
 	// will call GL_SetupAttributes in case of REF_GL

@@ -329,6 +329,8 @@ static ref_api_t gEngfuncs =
 	COM_FreeLibrary,
 	COM_GetProcAddress,
 
+	RM_LoadTexture,
+
 	R_Init_Video_,
 	R_Free_Video,
 
