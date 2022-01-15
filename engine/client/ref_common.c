@@ -330,6 +330,7 @@ static ref_api_t gEngfuncs =
 	COM_GetProcAddress,
 
 	RM_LoadTexture,
+	RM_LoadTextureFromBuffer,
 
 	R_Init_Video_,
 	R_Free_Video,
