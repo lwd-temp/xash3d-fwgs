@@ -331,6 +331,7 @@ static ref_api_t gEngfuncs =
 
 	RM_LoadTexture,
 	RM_LoadTextureFromBuffer,
+	RM_FreeTexture,
 
 	R_Init_Video_,
 	R_Free_Video,
