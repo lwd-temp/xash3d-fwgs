@@ -1879,6 +1879,7 @@ R_ShutdownImages
 */
 void R_ShutdownImages( void )
 {
+	int i;
 	gEngfuncs.Cmd_RemoveCommand( "texturelist" );
 
 	GL_CleanupAllTextureUnits();
