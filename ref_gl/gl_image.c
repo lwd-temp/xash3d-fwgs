@@ -17,7 +17,6 @@ GNU General Public License for more details.
 #include "crclib.h"
 
 static gl_texture_t gl_textures[MAX_TEXTURES];
-static uint gl_numTextures;
 
 static byte    dottexture[8][8] =
 {
@@ -273,7 +272,7 @@ static void GL_UpdateTextureParams( int texnum )
 
 	Assert( tex != NULL );
 
-	if( !tex->texnum ) return; // free slot
+	if( !tex->used ) return; // free slot
 
 	GL_Bind( XASH_TEXTURE0, texnum );
 
@@ -344,7 +343,7 @@ void R_SetTextureParameters( void )
 	ClearBits( gl_lightmap_nearest->flags, FCVAR_CHANGED );
 
 	// change all the existing mipmapped texture objects
-	for( i = 0; i < gl_numTextures; i++ )
+	for( i = 0; i < MAX_TEXTURES; i++ )
 		GL_UpdateTextureParams( i );
 }
 
@@ -1176,7 +1175,7 @@ static qboolean GL_UploadTexture( int texnum, rgbdata_t *pic )
 	qboolean		normalMap;
 	const byte	*bufend;
 
-	gl_texture_t* tex = &(gl_textures[texnum]);
+	gl_texture_t* tex = &gl_textures[texnum];
 	Assert( tex->used );
 
 	// dedicated server
@@ -1319,7 +1318,7 @@ static void GL_ProcessImage( int texnum, rgbdata_t *pic )
 {
 	uint img_flags = 0;
 	
-	gl_texture_t* tex = &(gl_textures[texnum]);
+	gl_texture_t* tex = &gl_textures[texnum];
 
 	// force upload texture as RGB or RGBA (detail textures requires this)
 	if( tex->flags & TF_FORCE_COLOR ) pic->flags |= IMAGE_HAS_COLOR;
@@ -1433,7 +1432,7 @@ qboolean GL_LoadTextureFromBuffer( int texnum, rgbdata_t *pic, texFlags_t flags,
 
 	if( update )
 	{
-		if( gl_textures[texnum].used == false )
+		if( !gl_textures[texnum].used )
 		{
 			gEngfuncs.Host_Error( "GL_LoadTextureFromBuffer: couldn't find texture with num %d for update\n", texnum );
 		}
@@ -1443,7 +1442,7 @@ qboolean GL_LoadTextureFromBuffer( int texnum, rgbdata_t *pic, texFlags_t flags,
 	else
 	{
 		// Initialize the new one
-		memset( &(gl_textures[texnum]), 0, sizeof(gl_texture_t) );
+		memset( &gl_textures[texnum], 0, sizeof(gl_texture_t) );
 
 		gl_textures[texnum].used   = true;
 		gl_textures[texnum].texnum = texnum;
@@ -1617,8 +1616,9 @@ int GL_TexMemory( void )
 {
 	int	i, total = 0;
 
-	for( i = 0; i < gl_numTextures; i++ )
-		total += gl_textures[i].size;
+	for( i = 0; i < MAX_TEXTURES; i++ )
+		if( gl_textures[i].used )
+			total += gl_textures[i].size;
 
 	return total;
 }
@@ -1843,7 +1843,6 @@ R_InitImages
 void R_InitImages( void )
 {
 	memset( gl_textures, 0, sizeof( gl_textures ));
-	gl_numTextures = 0;
 
 	R_SetTextureParameters();
 
@@ -1871,4 +1870,11 @@ R_ShutdownImages
 void R_ShutdownImages( void )
 {
 	gEngfuncs.Cmd_RemoveCommand( "texturelist" );
+
+	GL_CleanupAllTextureUnits();
+	for( i = 0; i < MAX_TEXTURES; i++ )
+		GL_DeleteTexture( i );
+
+	memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
+	memset( gl_textures, 0, sizeof( gl_textures ));
 }
