@@ -20,11 +20,11 @@ GNU General Public License for more details.
 
 #include <ref_api.h>
 
-void RM_Init();
+void RM_Init( void );
 
 void RM_SetRenderer( ref_interface_t *ref );
 
-void RM_ReuploadTextures();
+void RM_ReuploadTextures( void );
 
 int  RM_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
 int  RM_LoadTextureArray( const char **names, int flags );
