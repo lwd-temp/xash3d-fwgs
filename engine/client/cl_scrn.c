@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include "qfont.h"
 #include "input.h"
 #include "library.h"
+#include "texturelib/texturelib.h"
 
 convar_t *scr_centertime;
 convar_t *scr_loading;

@@ -16,6 +16,7 @@ GNU General Public License for more details.
 #include "common.h"
 #include "client.h"
 #include "studio.h"
+#include "texturelib/texturelib.h"
 
 /*
 ====================
@@ -161,7 +162,7 @@ void CL_UpdateStudioTexture( cl_entity_t *entity, mstudiotexture_t *ptexture, in
 	COM_StripExtension( mdlname );
 
 	Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
-	index = RM_LoadTexture( texname );
+	index = RM_FindTexture( texname );
 	if( !index ) return; // couldn't find texture
 
 	// search for pixels

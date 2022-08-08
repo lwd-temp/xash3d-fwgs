@@ -1918,8 +1918,8 @@ static void Mod_LoadTextures( dbspmodel_t *bmod )
 		// release old sky layers first
 		if( !Host_IsDedicated() )
 		{
-			RM_LoadTexture( R_GetBuiltinTexture( REF_ALPHASKY_TEXTURE ));
-			RM_LoadTexture( R_GetBuiltinTexture( REF_SOLIDSKY_TEXTURE ));
+			RM_FreeTexture( R_GetBuiltinTexture( REF_ALPHASKY_TEXTURE ));
+			RM_FreeTexture( R_GetBuiltinTexture( REF_SOLIDSKY_TEXTURE ));
 		}
 #endif
 	}

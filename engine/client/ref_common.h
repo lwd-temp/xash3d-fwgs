@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #define REF_COMMON_H
 
 #include "ref_api.h"
+#include "texturelib/texturelib.h"
 
 #define RP_LOCALCLIENT( e )	((e) != NULL && (e)->index == ( cl.playernum + 1 ) && e->player )
 
