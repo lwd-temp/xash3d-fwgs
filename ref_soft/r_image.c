@@ -794,7 +794,7 @@ qboolean GAME_EXPORT GL_LoadTextureFromBuffer( int texnum, rgbdata_t *pic, texFl
 	return true;
 }
 
-void GAME_EXPORT GL_DeleteTexture( unsigned int texnum )
+void GAME_EXPORT GL_DeleteTexture( int texnum )
 {
 	int i;
 	
