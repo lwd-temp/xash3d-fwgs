@@ -1630,24 +1630,28 @@ R_TextureList_f
 */
 void R_TextureList_f( void )
 {
-	gl_texture_t	*image;
-	int		i, texCount, bytes = 0;
+	size_t i = 0;
+	size_t bytes = 0;
+	size_t count = 0;
+	gl_texture_t *tex = NULL;
 
 	gEngfuncs.Con_Printf( "\n" );
 	gEngfuncs.Con_Printf( " -id-   -w-  -h-     -size- -fmt- -type- -data-  -encode- -wrap- -depth- -name--------\n" );
 
-	for( i = texCount = 0, image = gl_textures; i < gl_numTextures; i++, image++ )
+	for( i = 0; i < MAX_TEXTURES; i++ )
 	{
-		if( !image->texnum ) continue;
+		tex = &gl_textures[i];
 
-		bytes += image->size;
-		texCount++;
+		if( !tex->used ) continue;
+
+		bytes += tex->size;
+		count++;
 
 		gEngfuncs.Con_Printf( "%4i: ", i );
-		gEngfuncs.Con_Printf( "%4i %4i ", image->width, image->height );
-		gEngfuncs.Con_Printf( "%12s ", Q_memprint( image->size ));
+		gEngfuncs.Con_Printf( "%4i %4i ", tex->width, tex->height );
+		gEngfuncs.Con_Printf( "%12s ", Q_memprint( tex->size ));
 
-		switch( image->format )
+		switch( tex->format )
 		{
 		case GL_COMPRESSED_RGBA_ARB:
 			gEngfuncs.Con_Printf( "CRGBA " );
@@ -1763,7 +1767,7 @@ void R_TextureList_f( void )
 			break;
 		}
 
-		switch( image->target )
+		switch( tex->target )
 		{
 		case GL_TEXTURE_1D:
 			gEngfuncs.Con_Printf( " 1D   " );
@@ -1791,11 +1795,12 @@ void R_TextureList_f( void )
 			break;
 		}
 
-		if( image->flags & TF_NORMALMAP )
+		if( tex->flags & TF_NORMALMAP )
 			gEngfuncs.Con_Printf( "normal  " );
-		else gEngfuncs.Con_Printf( "diffuse " );
+		else
+			gEngfuncs.Con_Printf( "diffuse " );
 
-		switch( image->encode )
+		switch( tex->encode )
 		{
 		case DXT_ENCODE_COLOR_YCoCg:
 			gEngfuncs.Con_Printf( "YCoCg     " );
@@ -1820,17 +1825,19 @@ void R_TextureList_f( void )
 			break;
 		}
 
-		if( image->flags & TF_CLAMP )
+		if( tex->flags & TF_CLAMP )
 			gEngfuncs.Con_Printf( "clamp  " );
-		else if( image->flags & TF_BORDER )
+		else if( tex->flags & TF_BORDER )
 			gEngfuncs.Con_Printf( "border " );
-		else gEngfuncs.Con_Printf( "repeat " );
-		gEngfuncs.Con_Printf( "   %d  ", image->depth );
-		gEngfuncs.Con_Printf( "  %s\n", image->name );
+		else
+			gEngfuncs.Con_Printf( "repeat " );
+
+		gEngfuncs.Con_Printf( "   %d  ", tex->depth );
+		gEngfuncs.Con_Printf( "  %s\n", &tex->name );
 	}
 
 	gEngfuncs.Con_Printf( "---------------------------------------------------------\n" );
-	gEngfuncs.Con_Printf( "%i total textures\n", texCount );
+	gEngfuncs.Con_Printf( "%i total textures\n", count );
 	gEngfuncs.Con_Printf( "%s total memory used\n", Q_memprint( bytes ));
 	gEngfuncs.Con_Printf( "\n" );
 }
@@ -1860,6 +1867,8 @@ void R_InitImages( void )
 	tr.solidskyTexture = gEngfuncs.RM_FindTexture( REF_SOLIDSKY_TEXTURE );
 	tr.alphaskyTexture = gEngfuncs.RM_FindTexture( REF_ALPHASKY_TEXTURE );
 	tr.dlightTexture   = gEngfuncs.RM_FindTexture( REF_DLIGHT_TEXTURE );
+
+	gEngfuncs.Cmd_AddCommand( "texturelist", R_TextureList_f, "display loaded textures list" );
 }
 
 /*
