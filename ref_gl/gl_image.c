@@ -922,6 +922,7 @@ void GL_BoxFilter3x3( byte *out, const byte *in, int w, int h, int x, int y )
 	out[0] = r / acount;
 	out[1] = g / acount;
 	out[2] = b / acount;
+//	out[3] = (int)( SimpleSpline( ( a / 12.0f ) / 255.0f ) * 255 );
 }
 
 /*
