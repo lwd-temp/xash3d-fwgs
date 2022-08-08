@@ -1058,7 +1058,7 @@ static qboolean GL_UploadTexture( int texnum, rgbdata_t *pic )
 	const byte	*bufend;
 
 	gl_texture_t* tex = &(gl_textures[texnum]);
-	Assert( tex->used == TRUE );
+	Assert( tex->used );
 
 	// dedicated server
 	if( !glw_state.initialized )
@@ -1388,7 +1388,7 @@ int GL_CreateTextureArray( int texnum, int width, int height, int depth, const v
 		SetBits( r_empty.flags, IMAGE_MULTILAYER );
 	}
 
-	return GL_LoadTextureInternal( &(gl_textures[texnum].name), &r_empty, flags );
+	return GL_LoadTextureInternal( gl_textures[texnum].name, &r_empty, flags );
 }
 
 void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
