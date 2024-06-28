@@ -387,9 +387,6 @@ void FS_AddGameDirectory( const char *dir, uint flags )
 
 	for( archive = g_archives; archive->ext; archive++ )
 	{
-		if( archive->type == SEARCHPATH_WAD ) // HACKHACK: wads need direct paths but only in this function
-			FS_AllowDirectPaths( true );
-
 		for( i = 0; i < list.numstrings; i++ )
 		{
 			const char *ext = COM_FileExtension( list.strings[i] );
@@ -400,8 +397,6 @@ void FS_AddGameDirectory( const char *dir, uint flags )
 			Q_snprintf( fullpath, sizeof( fullpath ), "%s%s", dir, list.strings[i] );
 			FS_AddArchive_Fullpath( archive, fullpath, flags );
 		}
-
-		FS_AllowDirectPaths( false );
 	}
 
 	stringlistfreecontents( &list );
@@ -1167,13 +1162,13 @@ void FS_AddGameHierarchy( const char *dir, uint flags )
 	if( COM_CheckStringEmpty( fs_rodir ) )
 	{
 		// append new flags to rodir, except FS_GAMEDIR_PATH and FS_CUSTOM_PATH
-		uint newFlags = FS_NOWRITE_PATH | (flags & (~FS_GAMEDIR_PATH|FS_CUSTOM_PATH));
+		uint new_flags = FS_NOWRITE_PATH | (flags & (~FS_GAMEDIR_PATH|FS_CUSTOM_PATH));
 		if( isGameDir )
-			newFlags |= FS_GAMERODIR_PATH;
+			SetBits( new_flags, FS_GAMERODIR_PATH );
 
 		FS_AllowDirectPaths( true );
 		Q_snprintf( buf, sizeof( buf ), "%s/%s/", fs_rodir, dir );
-		FS_AddGameDirectory( buf, newFlags );
+		FS_AddGameDirectory( buf, new_flags );
 		FS_AllowDirectPaths( false );
 	}
 
@@ -1231,7 +1226,7 @@ void FS_LoadGameInfo( const char *rootfolder )
 	int	i;
 
 	// lock uplevel of gamedir for read\write
-	fs_ext_path = false;
+	FS_AllowDirectPaths( false );
 
 	if( rootfolder ) Q_strncpy( fs_gamedir, rootfolder, sizeof( fs_gamedir ));
 	Con_Reportf( "%s( %s )\n", __func__, fs_gamedir );
@@ -1317,7 +1312,7 @@ static qboolean FS_FindLibrary( const char *dllname, qboolean directpath, fs_dll
 	if( !COM_CheckString( dllname ))
 		return false;
 
-	fs_ext_path = directpath;
+	FS_AllowDirectPaths( directpath );
 
 	// HACKHACK remove relative path to game folder
 	if( !Q_strnicmp( dllname, "..", 2 ))
@@ -1330,15 +1325,8 @@ static qboolean FS_FindLibrary( const char *dllname, qboolean directpath, fs_dll
 		start += len;
 	}
 
-	// replace all backward slashes
-	len = Q_strlen( dllname );
-	for( i = 0; i < len; i++ )
-	{
-		if( dllname[i+start] == '\\' ) dllInfo->shortPath[i] = '/';
-		else dllInfo->shortPath[i] = Q_tolower( dllname[i+start] );
-	}
-	dllInfo->shortPath[i] = '\0';
-
+	Q_strnlwr( &dllname[start], dllInfo->shortPath, sizeof( dllInfo->shortPath )); // always in lower case (why?)
+	COM_FixSlashes( dllInfo->shortPath ); // replace all backward slashes
 	COM_DefaultExtension( dllInfo->shortPath, "."OS_LIB_EXT, sizeof( dllInfo->shortPath ));	// apply ext if forget
 
 	search = FS_FindFile( dllInfo->shortPath, &index, fixedname, sizeof( fixedname ), false );
@@ -1349,7 +1337,7 @@ static qboolean FS_FindLibrary( const char *dllname, qboolean directpath, fs_dll
 	}
 	else if( !directpath )
 	{
-		fs_ext_path = false;
+		FS_AllowDirectPaths( false );
 
 		// trying check also 'bin' folder for indirect paths
 		search = FS_FindFile( dllname, &index, fixedname, sizeof( fixedname ), false );
@@ -1359,42 +1347,44 @@ static qboolean FS_FindLibrary( const char *dllname, qboolean directpath, fs_dll
 		Q_strncpy( dllInfo->shortPath, fixedname, sizeof( dllInfo->shortPath ));
 	}
 
-	dllInfo->encrypted = FS_CheckForCrypt( dllInfo->shortPath );
+	dllInfo->encrypted = dllInfo->custom_loader = false; // predict state
 
-	if( index >= 0 && !dllInfo->encrypted && search )
+	if( search && index >= 0 ) // when library is available through VFS
 	{
-		// gamedll might resolve it's own path using dladdr()
-		// combine it with engine returned path to gamedir
-		// it might lead to double gamedir like this
-		// - valve/valve/dlls/hl.so
-		// instead of expected
-		// - valve/dlls/hl.so
-		Q_snprintf( dllInfo->fullPath, sizeof( dllInfo->fullPath ), "%s/%s%s", fs_rootdir, search->filename, dllInfo->shortPath );
-		dllInfo->custom_loader = false;	// we can loading from disk and use normal debugging
-	}
-	else
-	{
-		// NOTE: if search is NULL let the OS found library himself
-		Q_strncpy( dllInfo->fullPath, dllInfo->shortPath, sizeof( dllInfo->fullPath ));
+		dllInfo->encrypted = FS_CheckForCrypt( dllInfo->shortPath );
 
-		if( search && search->type != SEARCHPATH_PLAIN )
+		if( search->type == SEARCHPATH_PLAIN ) // is it on the disk? (intentionally omit pk3dir here)
 		{
-#if XASH_WIN32 && XASH_X86 // a1ba: custom loader is non-portable (I just don't want to touch it)
-			Con_Printf( S_WARN "%s: loading libraries from packs is deprecated "
-				"and will be removed in the future\n", __func__ );
-			dllInfo->custom_loader = true;
-#else
-			Con_Printf( S_WARN "%s: loading libraries from packs is unsupported on "
-				"this platform\n", __func__ );
-			dllInfo->custom_loader = false;
-#endif
+			// NOTE: gamedll might resolve it's own path using dladdr() and expects absolute path
+			// NOTE: the only allowed case when searchpath is set by absolute path is the RoDir
+			// rather than figuring out whether path is absolute, just check if it matches 
+			if( !Q_strnicmp( search->filename, fs_rodir, Q_strlen( fs_rodir )))
+			{
+				Q_snprintf( dllInfo->fullPath, sizeof( dllInfo->fullPath ), "%s%s", search->filename, dllInfo->shortPath );
+			}
+			else
+			{
+				Q_snprintf( dllInfo->fullPath, sizeof( dllInfo->fullPath ), "%s/%s%s", fs_rootdir, search->filename, dllInfo->shortPath );
+			}
 		}
 		else
 		{
-			dllInfo->custom_loader = false;
+			Q_snprintf( dllInfo->fullPath, sizeof( dllInfo->fullPath ), "%s%s", search->filename, dllInfo->shortPath );
+#if XASH_WIN32 && XASH_X86 // a1ba: custom loader is non-portable (I just don't want to touch it)
+			Con_Printf( S_WARN "%s: loading libraries from archives is deprecated and will be removed in the future\n", __func__ );
+			dllInfo->custom_loader = true;
+#else
+			Con_Printf( S_WARN "%s: loading libraries from archives is unsupported on this platform\n", __func__ );
+#endif
 		}
 	}
-	fs_ext_path = false; // always reset direct paths
+	else
+	{
+		// NOTE: if search is NULL let OS to find the library
+		Q_strncpy( dllInfo->fullPath, dllInfo->shortPath, sizeof( dllInfo->fullPath ));
+	}
+
+	FS_AllowDirectPaths( false ); // always reset direct paths
 
 	return true;
 }
@@ -1709,7 +1699,7 @@ file_t *FS_SysOpen( const char *filepath, const char *mode )
 		return NULL;
 	}
 
-
+	file->searchpath = NULL;
 	file->real_length = lseek( file->handle, 0, SEEK_END );
 
 	// uncomment do disable write
@@ -1735,15 +1725,22 @@ static int FS_DuplicateHandle( const char *filename, int handle, fs_offset_t pos
 }
 */
 
-file_t *FS_OpenHandle( const char *syspath, int handle, fs_offset_t offset, fs_offset_t len )
+file_t *FS_OpenHandle( searchpath_t *searchpath, int handle, fs_offset_t offset, fs_offset_t len )
 {
 	file_t *file = (file_t *)Mem_Calloc( fs_mempool, sizeof( file_t ));
 #ifndef XASH_REDUCE_FD
 #ifdef HAVE_DUP
 	file->handle = dup( handle );
 #else
-	file->handle = open( syspath, O_RDONLY|O_BINARY );
+	file->handle = open( searchpath->filename, O_RDONLY|O_BINARY );
 #endif
+
+	if( file->handle < 0 )
+	{
+		Con_Printf( S_ERROR "%s: couldn't create fd for %s:0x%lx: %s\n", __func__, searchpath->filename, (long)offset, strerror( errno ));
+		Mem_Free( file );
+		return NULL;
+	}
 
 	if( lseek( file->handle, offset, SEEK_SET ) == -1 )
 	{
@@ -1762,6 +1759,7 @@ file_t *FS_OpenHandle( const char *syspath, int handle, fs_offset_t offset, fs_o
 	file->offset = offset;
 	file->position = 0;
 	file->ungetc = EOF;
+	file->searchpath = searchpath;
 
 	return file;
 }
@@ -2338,6 +2336,8 @@ int FS_Gets( file_t *file, char *string, size_t bufsize )
 FS_Seek
 
 Move the position index in a file
+NOTE: when porting code, check return value!
+NOTE: it's not compatible with lseek!
 ====================
 */
 int FS_Seek( file_t *file, fs_offset_t offset, int whence )
@@ -2916,6 +2916,14 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 	stringlistfreecontents( &resultlist );
 
 	return search;
+}
+
+static const char *FS_ArchivePath( file_t *f )
+{
+	if( f->searchpath )
+		return f->searchpath->filename;
+
+	return "plain";
 }
 
 void FS_InitMemory( void )

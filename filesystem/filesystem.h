@@ -123,8 +123,8 @@ typedef struct fs_dllinfo_t
 {
 	char fullPath[2048]; // absolute disk path
 	string shortPath; // vfs path
-	qboolean encrypted;
-	qboolean custom_loader;
+	qboolean encrypted; // do we need encrypted DLL loader?
+	qboolean custom_loader; // do we need memory DLL loader?
 } fs_dllinfo_t;
 
 typedef struct fs_globals_t
@@ -191,9 +191,8 @@ typedef struct fs_api_t
 	qboolean (*SysFileExists)( const char *path );
 	const char *(*GetDiskPath)( const char *name, qboolean gamedironly );
 
-	// reserved
-	void (*Unused0)( void );
-	void *(*MountArchive_Fullpath)( const char *path, int flags );
+	const char *(*ArchivePath)( file_t *f ); // returns path to archive from which file was opened or "plain"
+	void *(*MountArchive_Fullpath)( const char *path, int flags ); // mounts the archive by path, if supported
 
 	qboolean (*GetFullDiskPath)( char *buffer, size_t size, const char *name, qboolean gamedironly );
 
